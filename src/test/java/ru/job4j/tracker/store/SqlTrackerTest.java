@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Properties;
 
 import static org.hamcrest.Matchers.is;
@@ -63,9 +64,15 @@ public class SqlTrackerTest {
     @Test
     public void whenSaveItemAndFindByNameThenMustBeTheSame() {
         SqlTracker tracker = new SqlTracker(connection);
-        Item item = new Item("item");
-        tracker.add(item);
-        assertThat(tracker.findByName(item.getName()).get(0), is(item));
+        List<Item> items = List.of(
+                new Item("item"),
+                new Item("item"),
+                new Item("item")
+        );
+        for (Item item : items) {
+            tracker.add(item);
+        }
+        assertThat(tracker.findByName("item").size(), is(3));
     }
 
     @Test
@@ -83,9 +90,8 @@ public class SqlTrackerTest {
         Item item = new Item("item");
         Item itemForReplace = new Item("itemNew");
         tracker.add(item);
-        itemForReplace.setId(item.getId());
         tracker.replace(item.getId(), itemForReplace);
-        assertThat(tracker.findById(item.getId()), is(itemForReplace));
+        assertThat(tracker.findById(item.getId()).getName(), is(itemForReplace.getName()));
     }
 
     @Test
