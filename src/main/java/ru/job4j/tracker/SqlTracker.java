@@ -68,7 +68,7 @@ public class SqlTracker implements Store, AutoCloseable {
         boolean result = false;
         try (PreparedStatement ps = cn.prepareStatement("UPDATE items SET name = ?, created = ? where id = ?")) {
             ps.setString(1, item.getName());
-            ps.setTimestamp(2, java.sql.Timestamp.valueOf(item.getCreated()));
+            ps.setTimestamp(2, Timestamp.valueOf(item.getCreated()));
             ps.setInt(3, id);
             result = ps.executeUpdate() > 0;
         } catch (Exception e) {
@@ -145,9 +145,7 @@ public class SqlTracker implements Store, AutoCloseable {
     }
 
     public static void main(String[] args) {
-        Input input = new ValidateInput(
-                new ConsoleInput()
-        );
+        Input input = new ValidateInput(new ConsoleInput());
         Output output = new ConsoleOutput();
         try (SqlTracker tracker = new SqlTracker()) {
             tracker.init();
