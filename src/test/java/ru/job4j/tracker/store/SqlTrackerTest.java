@@ -64,15 +64,11 @@ public class SqlTrackerTest {
     @Test
     public void whenSaveItemAndFindByNameThenMustBeTheSame() {
         SqlTracker tracker = new SqlTracker(connection);
-        List<Item> items = List.of(
-                new Item("item"),
-                new Item("item"),
-                new Item("item")
-        );
-        for (Item item : items) {
-            tracker.add(item);
-        }
-        assertThat(tracker.findByName("item").size(), is(3));
+        Item item1 = new Item("item");
+        Item item2 = new Item("item");
+        tracker.add(item1);
+        tracker.add(item2);
+        assertThat(tracker.findByName("item"), is(List.of(item1, item2)));
     }
 
     @Test
@@ -97,8 +93,10 @@ public class SqlTrackerTest {
     @Test
     public void whenSaveTwoItemsAndFindAllThenMustBeTwoItems() {
         SqlTracker tracker = new SqlTracker(connection);
-        tracker.add(new Item("item1"));
-        tracker.add(new Item("item2"));
-        assertThat(tracker.findAll().size(), is(2));
+        Item item1 = new Item("item1");
+        Item item2 = new Item("item2");
+        tracker.add(item1);
+        tracker.add(item2);
+        assertThat(tracker.findAll(), is(List.of(item1, item2)));
     }
 }
