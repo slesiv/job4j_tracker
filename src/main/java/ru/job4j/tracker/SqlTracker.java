@@ -18,6 +18,13 @@ public class SqlTracker implements Store, AutoCloseable {
 
     private Connection cn;
 
+    public SqlTracker() {
+    }
+
+    public SqlTracker(Connection cn) {
+        this.cn = cn;
+    }
+
     public void init() {
         try (InputStream in = SqlTracker.class.getClassLoader().getResourceAsStream("app.properties")) {
             Properties config = new Properties();
@@ -42,95 +49,99 @@ public class SqlTracker implements Store, AutoCloseable {
 
     @Override
     public Item add(Item item) {
-        final String add = "INSERT INTO items(name, created) VALUES (?, ?)";
-
-        try (var ps = cn.prepareStatement(add, PreparedStatement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = cn.prepareStatement("INSERT INTO items(name, created) VALUES (?, ?)", PreparedStatement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, item.getName());
             ps.setTimestamp(2, java.sql.Timestamp.valueOf(item.getCreated()));
             ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
-                 int id = rs.getInt(1);
-                 return findById(id);
+                 item.setId(rs.getInt(1));
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return item;
     }
 
     @Override
     public boolean replace(int id, Item item) {
-        return false;
+        boolean result = false;
+        try (PreparedStatement ps = cn.prepareStatement("UPDATE items SET name = ?, created = ? where id = ?")) {
+            ps.setString(1, item.getName());
+            ps.setTimestamp(2, java.sql.Timestamp.valueOf(item.getCreated()));
+            ps.setInt(3, id);
+            result = ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 
     @Override
     public boolean delete(int id) {
-        final String delete = "DELETE FROM items WHERE id = ?";
-        try (var ps = cn.prepareStatement(delete)) {
+        boolean result = false;
+        try (PreparedStatement ps = cn.prepareStatement("DELETE FROM items WHERE id = ?")) {
             ps.setInt(1, id);
-            return ps.executeUpdate() > 0;
+            result = ps.executeUpdate() > 0;
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return false;
+        return result;
     }
 
     @Override
     public List<Item> findAll() {
         List<Item> items = new ArrayList<>();
-        final String findById = "SELECT * FROM items";
-        try (var ps = cn.prepareStatement(findById)) {
+        try (PreparedStatement ps = cn.prepareStatement("SELECT * FROM items")) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                items.add(new Item(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getTimestamp("created").toLocalDateTime()));
+                items.add(getItem(rs));
             }
-            return items;
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return items;
     }
 
     @Override
     public List<Item> findByName(String key) {
         List<Item> items = new ArrayList<>();
-        final String findById = "SELECT * FROM items WHERE name = ?";
-        try (var ps = cn.prepareStatement(findById)) {
+        try (PreparedStatement ps = cn.prepareStatement("SELECT * FROM items WHERE name = ?")) {
             ps.setString(1, key);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                items.add(new Item(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getTimestamp("created").toLocalDateTime()));
+                items.add(getItem(rs));
             }
-            return items;
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return items;
     }
 
     @Override
     public Item findById(int id) {
-        final String findById = "SELECT * FROM items WHERE id = ?";
-        try (var ps = cn.prepareStatement(findById)) {
+        Item item = null;
+        try (PreparedStatement ps = cn.prepareStatement("SELECT * FROM items WHERE id = ?")) {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                return new Item(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getTimestamp("created").toLocalDateTime());
+            if (rs.next()) {
+                item = getItem(rs);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return item;
+    }
+
+    private Item getItem(ResultSet rs) throws SQLException {
+        Item item = null;
+        if (rs != null) {
+            item = new Item(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getTimestamp("created").toLocalDateTime());
+        }
+        return item;
     }
 
     public static void main(String[] args) {
